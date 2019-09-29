@@ -1,0 +1,4 @@
+/home/ldy/6_temp/clion-2019.1.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/ldy/CLionProjects/vo_project
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/ldy/CLionProjects/vo_project/cmake-build-debug
