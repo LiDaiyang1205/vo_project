@@ -33,7 +33,7 @@ namespace myslam{
 
         //这里为匹配结果T，还有表征结果好坏的内点数和丢失数
         SE3 T_c_r_estimated_; // 当前帧估计位姿
-        int num_inliers_; // icp 的内在特征数量
+        int num_inliers_; // 好的特征数量
         int num_lost_; // 丢失数
 
         // 参数
