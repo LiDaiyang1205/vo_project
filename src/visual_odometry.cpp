@@ -6,6 +6,7 @@
 
 #include "myslam/config.h"
 #include "myslam/visual_odometry.h"
+#include "myslam/g2o_types.h"
 
 namespace myslam
 {
@@ -204,6 +205,51 @@ namespace myslam
                 SO3(rvec.at<double>(0,0), rvec.at<double>(1,0), rvec.at<double>(2,0)),
                 Vector3d( tvec.at<double>(0,0), tvec.at<double>(1,0), tvec.at<double>(2,0))
         );
+
+        // using bundle adjustment to optimize the pose
+        //初始化，注意由于更新所需要的unique指针问题。
+        typedef g2o::BlockSolver<g2o::BlockSolverTraits<6,2>> Block;
+        Block::LinearSolverType* linearSolver = new g2o::LinearSolverDense<Block::PoseMatrixType>();
+        Block* solver_ptr = new Block( linearSolver );
+        g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg ( solver_ptr );
+        g2o::SparseOptimizer optimizer;
+        optimizer.setAlgorithm ( solver );
+
+        //添加顶点，一帧只有一个位姿，也就是只有一个顶点
+        g2o::VertexSE3Expmap* pose = new g2o::VertexSE3Expmap();
+        pose->setId ( 0 );
+        pose->setEstimate ( g2o::SE3Quat (
+                T_c_r_estimated_.rotation_matrix(),
+                T_c_r_estimated_.translation()
+        ) );
+        optimizer.addVertex ( pose );
+
+        // edges边有许多，每个特征点都对应一个重投影误差，也就有一个边。
+        for ( int i=0; i<inliers.rows; i++ )
+        {
+            int index = inliers.at<int>(i,0);
+            // 3D -> 2D projection
+            EdgeProjectXYZ2UVPoseOnly* edge = new EdgeProjectXYZ2UVPoseOnly();
+            edge->setId(i);
+            edge->setVertex(0, pose);
+            edge->camera_ = curr_->camera_.get();
+            edge->point_ = Vector3d( pts3d[index].x, pts3d[index].y, pts3d[index].z );
+            edge->setMeasurement( Vector2d(pts2d[index].x, pts2d[index].y) );
+            edge->setInformation( Eigen::Matrix2d::Identity() );
+            optimizer.addEdge( edge );
+        }
+
+        //开始优化
+        optimizer.initializeOptimization();
+        //设置迭代次数
+        optimizer.optimize(10);
+
+        //这步就是将优化后的结果，赋值给T_c_r_estimated_
+        T_c_r_estimated_ = SE3 (
+                pose->estimate().rotation(),
+                pose->estimate().translation()
+        );
+
     }
 
     //简单的位姿检验函数，整体思路就是匹配点不能过少，运动不能过大。
