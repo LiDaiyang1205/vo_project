@@ -24,15 +24,22 @@ namespace myslam{
         Frame::Ptr curr_; // current frame 当前帧
 
         //这里是两帧匹配需要的：keypoints，descriptors，matches
+        //在ORB部分去掉了关于参考帧的东西，3D点，描述子等
         cv::Ptr<cv::ORB> orb_; // orb 检测与计算
-        vector<cv::Point3f> pts_3d_ref_; // 参考帧的3d点
+        // vector<cv::Point3f> pts_3d_ref_; // 参考帧的3d点
         vector<cv::KeyPoint> keypoints_curr_; // 当前帧的keypoint
         Mat descriptors_curr_; // 当前帧的描述子
-        Mat descriptors_ref_; // 参考帧的描述子
-        vector<cv::DMatch> feature_matches_; // 特征匹配
+        // Mat descriptors_ref_; // 参考帧的描述子
+        // vector<cv::DMatch> feature_matches_; // 特征匹配
+
+        //在匹配器中，所需要的匹配变成了地图点和帧中的关键点。
+        cv::FlannBasedMatcher   matcher_flann_;     // flann matcher
+        vector<MapPoint::Ptr>   match_3dpts_;       // matched 3d points
+        vector<int>             match_2dkp_index_;  // matched 2d pixels (index of kp_curr)
 
         //这里为匹配结果T，还有表征结果好坏的内点数和丢失数
-        SE3 T_c_r_estimated_; // 当前帧估计位姿
+        //这里的T也变成了直接的cw，而不是之前的当前帧和参考帧的cr
+        SE3 T_c_w_estimated_; // 当前帧估计位姿
         int num_inliers_; // 好的特征数量
         int num_lost_; // 丢失数
 
@@ -48,6 +55,8 @@ namespace myslam{
         double key_frame_min_rot; // 两个关键帧的最小旋转
         double key_frame_min_trans; // 两个关键帧的最小平移
 
+        double  map_point_erase_ratio_; // remove map point ratio
+
     public:// 公式
         VisualOdometry();
         ~VisualOdometry();
@@ -61,12 +70,17 @@ namespace myslam{
         void computeDescriptors();
         void featureMatching();
         void poseEstimationPnP();
-        void setRef3DPoints();
+        // void setRef3DPoints();
+        //增加的优化地图的函数，这个函数可能实现的就是对整个后端地图的优化
+        void optimizeMap();
 
         //这里是关键帧的一些功能函数
         void addKeyFrame();
+        //增加地图点函数
+        void addMapPoints();
         bool checkEstimatedPose();
         bool checkKeyFrame();
+        double getViewAngle( Frame::Ptr frame, MapPoint::Ptr point );
 
     };
 }

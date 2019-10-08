@@ -12,6 +12,7 @@ public:
     SE3 T_c_w_; // 世界坐标系到相机坐标系的变换
     Camera::Ptr camera_; // RGBD相机模式
     Mat color_, depth_; //彩色和深度图像
+    bool is_key_frame_;  // whether a key-frame 是否是关键帧
 
 public:
     Frame();
@@ -25,6 +26,7 @@ public:
     double findDepth(const cv::KeyPoint& kp);
     // 获取相机光心
     Vector3d getCamCenter() const ;
+    void setPose( const SE3& T_c_w );
     // 检查point是否在该frame中，在视野内
     bool isInFrame(const Vector3d& pt_world);
 };
